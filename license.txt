@@ -1,0 +1,3 @@
+All code in this project is licenced GPLv3.
+
+Copyright: Ilari Kajaste (http://iki.fi/ilari.kajaste)

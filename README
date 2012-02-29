@@ -1,0 +1,71 @@
+Joomla 2.5 Asset Weaver
+
+author: Ilari Kajaste (http://iki.fi/ilari.kajaste)
+original date: 2012-02-29
+
+Asset Weaver is a PHP command line script that will fix the #_assets table that can get broken after a migration to Joomla 2.5. Further info about the problem at the end of this file.
+
+The script takes as command line argument Joomla configuration.php file to read database name, prefix, user and password to access the database.
+
+ALWAYS REMEMBER TO BACK UP YOUR DATABASE! (actually, just the #_assets table should suffice)
+
+   Run: php assetweaver.php my_joomla_site/configuration.php
+
+On a site without problems, this should report no errors. On a site with problems, it will blurt out something akin to:
+
+   Errors: 3027 (1)
+   {1} Multiple root objects
+
+   Applied fixes: 4707
+   SQL to execute: 3199
+
+The lines after "Errors" will list few of the first errors the script did NOT fix. The complete number of these is in parentheses. If it contains anything other than the "Multiple root objects" (pretty much a bug) you might want to inspect further. Or just cross your fingers and execute the script anyway. :)
+
+NOTE: Without the activating argument ("ok"), the script will not make any changes to the database. It will run through the fix process as normal but it will skip running the SQL UPDATEs.
+
+There are some commands you can give as a command line argument:
+
+	ok - writes the changes to database
+	verbose - prints a LOT of information (seriously, can be megabytes)
+	veryverbose - prints even more information (all of the errors)
+	tree - prints out a LARGE tree structure of all the assets
+	
+(Note that all of these are only designed to be informative for me, myself and I. No further documentation. Feel free to poke around, of course!)
+
+
+
+*** WHAT IT DOES
+
+Basically, it will attempt to guess how the #_assets table should be formed, and rebuild the tree structure by rewriting parent_id,lft,rgt,level values.
+
+The script reads the entire table into a PHP object scruture, then rummages around analysing and manipulating that structure, marking up errors it finds and fixes it's does. The it creates the relevant SQL UPDATE queries and executes them.
+
+Probably needs a heap of memory to run, but hey, it's command line php so whatever.
+
+
+
+// To be documented further. Or not.
+
+
+
+*** ABOUT THE BROKEN ASSETS TABLE PROBLEM
+
+The broken assets table problem has some documentation at:
+
+- http://forum.joomla.org/viewtopic.php?f=616&t=679355
+- http://joomlacode.org/gf/project/joomla/tracker/?action=TrackerItemEdit&tracker_item_id=25617
+
+Basically, a _migrated_ site with approx. >1000 articles will cause, in some circumstances, a database query that will make the MySQL server reluctantly bend the knee to the new lord protector of the server realm. The culprit is the following SQL query:
+
+SELECT b.rules
+FROM jos_assets AS a
+LEFT JOIN jos_assets AS b ON b.lft <= a.lft AND b.rgt >= a.rgt;
+
+Problem is, the migration (using jUpgrade) does not build the #_assets table correctly. Yes, really. *sigh*
+
+While most SQL processes (run "show processlist" as root) go by in less than a second, this recursive mammoth can keep the server busy for over a minute! MySQL process list will most probably show state as "Copying to tmp table".
+
+The recursive query is apparently caused by libraries/joomla/access.php around line 187. After fixing the broken table, the query will not be triggered without some further limitation placed on it.
+
+Note: Running the query manually still takes heaps of time even after the fix. The point about the fix is that Joomla will no longer end up running the query as it was.
+
