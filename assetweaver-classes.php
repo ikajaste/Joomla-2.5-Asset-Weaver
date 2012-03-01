@@ -16,6 +16,12 @@ class Asset {
 		$this->children[] = $asset;
 		$this->sortChildren();
 	}
+	function setParent($parent) {
+		if (isset($this->parent_asset)) { $this->parent_asset->removeChild($this); }
+		$this->parent_asset = $parent;
+		$this->parent_id = $this->parent_asset->id;
+		$this->parent_asset->addChild($this);
+	}
 	function removeChild($asset) {
 		$ch = array();
 		foreach ($this->children as $child) {
@@ -188,24 +194,11 @@ class AssetContainer {
 	}
 	function assetCategoryLink($assoc) {
 		$aid = $assoc['asset_id'];
-		// First, a nasty fix to get correct asset id for root category
 
-
+		// Find root category
 		if (!isset($this->assets[$aid])) {
 			if (($assoc['level'] == 0) && ($assoc['title'] == 'ROOT')) {
 				$this->rootcategoryid = $assoc['id'];
-				// NO, strike that! Since apparently category title="ROOT" should have asset_id 0
-/*
-				if ($this->trueroot) {
-					$aid = $this->trueroot->id;
-					$this->addError('Root category has wrong asset id ('.$assoc['asset_id'].')',$this->trueroot);
-					$this->trueroot->fixes[] = 'Root category asset id ('.$assoc['asset_id'].') set to root ('.$aid.')';
-					$this->fixed[] = $this->trueroot;
-					$this->extrasql[] = "UPDATE %prefix%categories SET asset_id = $aid WHERE id = ".$assoc['id'];
-				} else {
-					$this->addError('Root category has wrong asset id ('.$assoc['asset_id'].') and cannot find true root for fix');
-				}
-				*/
 			}
 		}
 		
@@ -214,7 +207,7 @@ class AssetContainer {
 			foreach ($assoc as $key => $val) {
 				$this->assets[$aid]->category->$key = $val;
 			}
-		} elseif ($assoc['id'] != $this->rootcategoryid) {
+		} elseif ($assoc['id'] != $this->rootcategoryid) { // Root category has no asset
 			$this->addError("Asset ($aid) not found for category (".$assoc['id'].")");
 		}
 	}
@@ -259,10 +252,7 @@ class AssetContainer {
 					array_pop($parts);
 					$linkname = join('.',$parts);
 					if (isset($assetref[$linkname])) {
-						if (isset($asset->parent_asset)) { $asset->parent_asset->removeChild($asset); }
-						$asset->parent_asset = $assetref[$linkname];
-						$asset->parent_id = $asset->parent_asset->id;
-						$asset->parent_asset->addChild($asset);
+						$asset->setParent($assetref[$linkname]);
 						$asset->fixes[] = 'Parent assigned by attemptAssetNameStructureFix';
 						$this->removeRoot($asset->id);
 						foreach ($asset->errors as $error) { $error->silent = true; }
@@ -361,7 +351,7 @@ class AssetContainer {
 			if (isset($asset->article)) {
 				if (!isset($catref[$asset->article->catid])) {
 					$this->addError('Asset for article ('.$asset->name.') category ('.$asset->article->catid.') not found',$asset,true);
-					$asset->fixes[] = 'Article has no category, setting asset parent as root'; // BEEP
+					$asset->fixes[] = 'Article has no category, setting asset parent as root';
 					$parent = $this->roots[0];
 				} else {
 					$parent = $catref[$asset->article->catid];
@@ -369,13 +359,9 @@ class AssetContainer {
 				if ($asset->parent_id != $parent->id) {
 					print '.';
 					$this->addError('Asset parent ('.$asset->parent_id.') different from article category asset ('.$parent->id.')',$asset);
-					if (isset($asset->parent_asset)) { $asset->parent_asset->removeChild($asset); }
-					$asset->parent_asset = $parent;
-					$asset->parent_id = $parent->id;
-					$asset->parent_asset->addChild($asset);
+					$asset->setParent($parent);
 					$asset->fixes[] = 'Parent assigned by attemptArticleLinkFix';
-					// Also remove earlier ACL quickfix by resetting rules to defaults
-					//$this->undoRuleFix($asset->id);
+
 					$this->removeRoot($asset->id);
 					foreach ($asset->errors as $error) { $error->silent = true; }
 					$this->fixed[] = $asset;
@@ -387,12 +373,9 @@ class AssetContainer {
 					$parent = $catref[$asset->category->parent_id];
 					if ($asset->parent_id != $parent->id) {
 						$this->addError('Asset parent ('.$asset->parent_id.') different from category parent asset ('.$parent->id.')',$asset);
-						if (isset($asset->parent_asset)) { $asset->parent_asset->removeChild($asset); }
-						$asset->parent_asset = $parent;
-						$asset->parent_id = $parent->id;
-						$asset->parent_asset->addChild($asset);
+						$asset->setParent($parent);
 						$asset->fixes[] = 'Parent assigned by attemptArticleLinkFix';
-						//$this->undoRuleFix($asset->id);
+
 						$this->removeRoot($asset->id);
 						foreach ($asset->errors as $error) { $error->silent = true; }
 						$this->fixed[] = $asset;
@@ -407,10 +390,6 @@ class AssetContainer {
 		}
 		print "done.\n";
 
-	}
-	function undoRuleFix($id) {
-		// This is only here to undo a quick asset fix the author of this program initially did for some sites
-		$this->extrasql[] = 'UPDATE %prefix%assets SET rules = \'{"core.delete":[],"core.edit":[],"core.edit.state":[]}\' WHERE id = '.$id;
 	}
 	function fullReIndex() {
 		print "Reindexing ";
