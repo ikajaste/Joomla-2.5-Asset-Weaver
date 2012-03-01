@@ -2,6 +2,7 @@ Joomla 2.5 Asset Weaver
 
 author: Ilari Kajaste (http://iki.fi/ilari.kajaste)
 original date: 2012-02-29
+written for: Helka ry (Helsinki neighbourhoods association http://helka.net)
 
 Asset Weaver is a PHP command line script that will fix the #_assets table that can get broken after a migration to Joomla 2.5. Further info about the problem at the end of this file.
 
@@ -39,6 +40,12 @@ There are some commands you can give as a command line argument:
 Basically, it will attempt to guess how the #_assets table should be formed, and rebuild the tree structure by rewriting parent_id,lft,rgt,level values.
 
 The script reads the entire table into a PHP object scruture, then rummages around analysing and manipulating that structure, marking up errors it finds and fixes it's does. The it creates the relevant SQL UPDATE queries and executes them.
+
+There are two main methods that fixed the issue for me:
+
+- Asset structure by mimicking article/category structure (attemptArticleLinkFix). The code reads all the articles and categories from database, and links them to their assets, then attempts to set the asset structure as similar to the article/category structure.
+
+- Asset structure by asset name (attemptAssetNameStructureFix). The code braks every asset's name (e.g. "com_content.category.5") into parts, and tries to give it a parent object based on the name. Since this isn't tied to articles/categories, it manages to nest other components correctly as well.
 
 Probably needs a heap of memory to run, but hey, it's command line php so whatever.
 
