@@ -56,6 +56,8 @@ require_once('assetweaver-classes.php');
 print 'Connecting to '.$dbname.' as '.$user.' to read tables: '.$prefix.'assets'."\n";
 
 $dbc = mysql_connect('localhost',$user,$pwd);
+if (!$dbc) { print mysql_error()."\n"; print "\nCannot conncect to database\n"; die(); }
+
 mysql_select_db($dbname,$dbc);
 
 
@@ -85,6 +87,7 @@ while ($row = mysql_fetch_assoc($res)) {
 	$assets->assetCategoryLink($row);
 
 }
+mysql_close($dbc);
 
 $assets->linkAssets();
 $assets->checkConsistency();
@@ -116,6 +119,14 @@ if ($cmd == 'ok') $execute = true;
 
 print "\n";
 if ($execute) {
+
+	print 'Reconnecting to '.$dbname.' as '.$user.' to write changes to: '.$prefix.'assets'."\n";
+
+	$dbc = mysql_connect('localhost',$user,$pwd);
+	if (!$dbc) { print mysql_error()."\n"; print "\nCannot conncect to database\n"; die(); }
+
+	mysql_select_db($dbname,$dbc);
+
 	print 'Executing SQL: ';
 	foreach ($sqls as $sql) {
 		mysql_query($sql,$dbc);
@@ -126,6 +137,7 @@ if ($execute) {
 		}
 	}
 	print " done.\n";
+	mysql_close($dbc);
 } else {
 	print '*** SKIPPING SQL EXECUTION'."\n";
 }
