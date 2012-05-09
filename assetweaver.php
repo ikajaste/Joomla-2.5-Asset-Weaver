@@ -1,7 +1,7 @@
 <?php
 if (!isset($argv[1])) {
-	print "Usage: ".basename(__FILE__)." manual <database> <user> (<prefix>)\n";
-	print "  e.g. ".basename(__FILE__)." pihlajamaki_uusi pihlajamaki j17_\n";
+	print "Usage: ".basename(__FILE__)." manual <database> <user> (<prefix> <host>)\n";
+	print "  e.g. ".basename(__FILE__)." pihlajamaki_uusi pihlajamaki j17_ localhost\n";
 	print "Or: ".basename(__FILE__)." <configfile>\n";
 	print "append argument 'verbose' for more details, 'ok' to execute\n";
 	die();
@@ -11,7 +11,9 @@ if ((isset($argv[1])) && ($argv[1] == 'manual')) {
 	$user = $argv[3];
 	$pwd = trim(readline('Database password for '.$user.': '));
 	$prefix = 'j17_';
+	$host = 'localhost';
 	if (isset($argv[4])) $prefix = $argv[4];
+	if (isset($argv[5])) $host = $argv[5];
 } else {
 	$configfile = $argv[1];
 	print 'Reading configuration from '.$configfile."\n";
@@ -20,11 +22,13 @@ if ((isset($argv[1])) && ($argv[1] == 'manual')) {
 		$conf = new JConfig();
 		$dbname = $conf->db;
 		$user = $conf->user;
+		$host = $conf->host;
 		$pwd = $conf->password;
 		$prefix = $conf->dbprefix;
 	} elseif (isset($mosConfig_db)) {
 		$dbname = $mosConfig_db;
 		$user = $mosConfig_user;
+		$host = $mosConfig_host;
 		$pwd = $mosConfig_password;
 		$prefix = $mosConfig_dbprefix;
 	}
@@ -55,7 +59,7 @@ require_once('assetweaver-classes.php');
 
 print 'Connecting to '.$dbname.' as '.$user.' to read tables: '.$prefix.'assets'."\n";
 
-$dbc = mysql_connect('localhost',$user,$pwd);
+$dbc = mysql_connect($host,$user,$pwd);
 if (!$dbc) { print mysql_error()."\n"; print "\nCannot conncect to database\n"; die(); }
 
 mysql_select_db($dbname,$dbc);
@@ -122,7 +126,7 @@ if ($execute) {
 
 	print 'Reconnecting to '.$dbname.' as '.$user.' to write changes to: '.$prefix.'assets'."\n";
 
-	$dbc = mysql_connect('localhost',$user,$pwd);
+	$dbc = mysql_connect($host,$user,$pwd);
 	if (!$dbc) { print mysql_error()."\n"; print "\nCannot conncect to database\n"; die(); }
 
 	mysql_select_db($dbname,$dbc);
