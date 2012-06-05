@@ -105,12 +105,14 @@ class Asset {
 		// Check depth
 		if ($depth != $this->level) {
 			$this->container->addError('Depth level not what expected (exp '.$depth.' is '.$this->level.')',$this);
+			$this->container->reindexrequired = true;		
 		}
 
 		// First check if left side matches
 		if ($cnum) {
 			if ($cnum != $this->lft) {
 				$this->container->addError('LFT value not what expected by parent (exp '.$cnum.' is '.$this->lft.')',$this);
+				$this->container->reindexrequired = true;		
 			}
 		}
 		$cnum = $this->lft;
@@ -122,6 +124,7 @@ class Asset {
 		$cnum++;
 		if ($cnum != $this->rgt) {
 			$this->container->addError('RGT value not what expected (exp '.$cnum.' is '.$this->rgt.')',$this);
+			$this->container->reindexrequired = true;		
 		}
 		// Return right side number
 		return $cnum;
