@@ -95,11 +95,13 @@ mysql_close($dbc);
 
 $assets->linkAssets();
 $assets->checkConsistency();
+$assets->performReindex();
 
 if ($cmd == 'tree') {
 	$assets->printTree();
 }
-print "\nErrors: ".count($assets->errors)." (".$assets->countActiveErrors().")\n";
+print "\nErrors: ".count($assets->errors)." (".$assets->countActiveErrors().") ";
+print "Affected nodes: ".$assets->countNodesWithErrors()."\n";
 $assets->printErrors();
 print "\nApplied fixes: ".count($assets->fixed)."\n";
 

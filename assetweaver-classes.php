@@ -105,14 +105,18 @@ class Asset {
 		// Check depth
 		if ($depth != $this->level) {
 			$this->container->addError('Depth level not what expected (exp '.$depth.' is '.$this->level.')',$this);
-			$this->container->reindexrequired = true;		
+			$this->container->reindexrequired = true;
+/*			$this->fixes[] = 'Depth level not what expected, triggering reindex';
+			$this->container->fixed[] = $this; */
 		}
 
 		// First check if left side matches
 		if ($cnum) {
 			if ($cnum != $this->lft) {
 				$this->container->addError('LFT value not what expected by parent (exp '.$cnum.' is '.$this->lft.')',$this);
-				$this->container->reindexrequired = true;		
+				$this->container->reindexrequired = true;
+/*				$this->fixes[] = 'LFT value not what expected, triggering reindex';
+				$this->container->fixed[] = $this; */
 			}
 		}
 		$cnum = $this->lft;
@@ -124,7 +128,9 @@ class Asset {
 		$cnum++;
 		if ($cnum != $this->rgt) {
 			$this->container->addError('RGT value not what expected (exp '.$cnum.' is '.$this->rgt.')',$this);
-			$this->container->reindexrequired = true;		
+			$this->container->reindexrequired = true;
+/*			$this->fixes[] = 'RGT value not what expected, triggering reindex';
+			$this->container->fixed[] = $this; */
 		}
 		// Return right side number
 		return $cnum;
@@ -227,6 +233,8 @@ class AssetContainer {
 		//if (count($this->roots) > 1) $this->attemptDirectLinkFix();
 		if (count($this->roots) > 1) $this->attemptWideLinkFix();
 		$this->attemptArticleLinkFix();
+	}
+	function performReindex() {
 		if ($this->reindexrequired) {
 			$this->fullReIndex();
 		}
@@ -425,13 +433,17 @@ class AssetContainer {
 			$this->addError('No root object');
 			return;
 		}
-		// Check traversal
-		foreach ($this->roots as $root) {
-			$root->checkTree(null);
-		}
-		foreach ($this->assets as $asset) {
-			if ($asset->rgt <= $asset->lft) {
-				$this->addError('LFT ('.$asset->lft.') and RGT ('.$asset->rgt.') values not proper',$asset);
+		// No need to check tree structure if reindex already scheduled
+		if (!$this->reindexrequired) {
+			// Check traversal
+			foreach ($this->roots as $root) {
+				$root->checkTree(null);
+			}
+			foreach ($this->assets as $asset) {
+				if ($asset->rgt <= $asset->lft) {
+					$this->addError('LFT ('.$asset->lft.') and RGT ('.$asset->rgt.') values not proper',$asset);
+					$this->reindexrequired = true;
+				}
 			}
 		}
 	}
@@ -442,6 +454,18 @@ class AssetContainer {
 			$filter = false;
 			$root->printStructure(0,false,$filter,true);
 		}
+	}
+	function countNodesWithErrors() {
+		$count = 0;
+		$errornodes=array();
+		foreach ($this->errors as $error) {
+			foreach ($error->assets as $asset) {
+				if (!in_array($asset->id,$errornodes)) {
+					$errornodes[] = $asset->id;
+				}
+			}
+		}
+		return count($errornodes);
 	}
 	function countActiveErrors() {
 		$count = 0;
